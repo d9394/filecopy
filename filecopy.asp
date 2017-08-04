@@ -108,7 +108,7 @@
     cfgFileObj.Close
 
   end if
-'  target="\Server\qs\" & date1 & "\"
+
   req=trim(request("a"))
   action=trim(request("c"))
   if len(req)>0 and action="copy" then
@@ -135,7 +135,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <!--<meta http-equiv="refresh" content="300; url=<%=pageName%>?reqfunc=<%=reqfunc%>"/>-->
-<title>文件拷贝工具</title>
+<title>XXXXXXXX文件拷贝工具</title>
 <style type="text/css">
 <!--
 body {
