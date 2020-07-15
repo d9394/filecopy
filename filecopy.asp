@@ -29,7 +29,7 @@
       line=trim(cfgFileObj.ReadLine)
       if len(line)>0 then
         linetext=split(line,",")
-        if left(trim(linetext(0)),1) <> "#" then
+        if left(trim(linetext(0)),1) <> "#" and ubound(linetext) > 3 then
 		  'source(n,0),业务
 			source(n,0)=trim(linetext(0))
 		  'source(n,1),源路径
@@ -108,7 +108,7 @@
     cfgFileObj.Close
 
   end if
-
+'  target="\Server\qs\" & date1 & "\"
   req=trim(request("a"))
   action=trim(request("c"))
   if len(req)>0 and action="copy" then
@@ -135,7 +135,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <!--<meta http-equiv="refresh" content="300; url=<%=pageName%>?reqfunc=<%=reqfunc%>"/>-->
-<title>XXXXXXXX文件拷贝工具</title>
+<title>XXXXXXX文件拷贝工具</title>
 <style type="text/css">
 <!--
 body {
@@ -153,8 +153,17 @@ body {
 a img {
 	border:none;
 }
-
 -->
+table{
+	margin:0px auto;
+	font:Georgia 11px;
+	color:#333333;
+	text-align:center;
+	border-collapse:collapse;
+}
+td{
+	border:1px solid #000;
+}
 </style>
 
 </head>
@@ -214,8 +223,8 @@ a img {
 '		END IF
 
 		response.write "<td>" & source(xx,0) & "</td>"
-		response.write "<td align=left width='450'>" & iif(source_status,"<font color='blue'>","<font color='red'>") & source_file & "</font>" & iif(source_status, "<font color='" & iif(source_size=0,"red","green") & "'>(" & source_size & "字节&nbsp;" & source_time & ")" & "</font>"  , "" ) & "</td>" & chr(13)
-		response.write "<td align=left width='450'>" & iif(target_status,"<font color='blue'>","<font color='red'>") & target_file &  "</font><!--" & iif(target_status,"("& target_size & "字节&nbsp;" & target_time & ")" ,"" ) & "--></td>" & chr(13)
+		response.write "<td align=left width='450'>" & iif(source_status,"<font color='blue' size=-1>","<font color='red' size=-1>") & source_file & "</font>" & iif(source_status, "<font color='" & iif(source_size=0,"red","green") & "' size=-1>(" & source_size & "字节&nbsp;" & source_time & ")" & "</font>"  , "" ) & "</td>" & chr(13)
+		response.write "<td align=left width='450'>" & iif(target_status,"<font color='blue' size=-1>","<font color='red' size=-1>") & target_file &  "</font><!--" & iif(target_status,"("& target_size & "字节&nbsp;" & target_time & ")" ,"" ) & "--></td>" & chr(13)
 		response.write "<td>"
 		IF  SH_File = "" THEN
 			if (source(xx,4)="OnlyToday") and (d<>date()) then
@@ -288,18 +297,21 @@ Function File_COPY(src,tag,pwd)
 		if FSO1.FileExists( src ) then
 			if left(lcase(tag),4) <> "null" then
 				tag_path=mid(tag,1,instrrev(tag,"\"))
-				if not FSO.FolderExists(tag_path) then
-				   FSO.CreateFolder(tag_path)
+				if not FSO1.FolderExists(tag_path) then
+				   FSO1.CreateFolder(tag_path)
 				end if
 				FSO1.CopyFile src,tag,true
+				if not FSO1.FileExists(tag) then
+					response.write "Copy Fail : " & tag
+				end if
 			end if
 
 			if pwd="OK" then
-				src1=Server.MapPath("\") & "\OK.txt"
+		'		src1=Server.MapPath("\") & "\OK.txt"
 				if left(lcase(tag),4)="null" then
-					tag1=src & ".OK"
+					tag1 = src & ".OK"
 				else
-					tag1= tag & ".OK"
+					tag1 = tag & ".OK"
 				end if
 		'		response.write src1 & "->" & tag1
 				set okfile=FSO1.createtextfile(tag1,true)
@@ -308,12 +320,12 @@ Function File_COPY(src,tag,pwd)
 				set okfile=nothing
 				
 			end if
-			if (right(lcase(src),4)=".zip" or right(lcase(src),4)=".rar") and (right(lcase(tag),4)<> "null" or pwd="decomp") then
+			if (right(lcase(src),4)=".zip" or right(lcase(src),4)=".rar") and (right(lcase(tag),4)<> "null" or pwd="decomp") and ( pwd <> "OK" and pwd <> "false" ) then
 				if right(lcase(src),4)=".rar" then
-					command= chr(34)& "c:\program files\winrar\rar.exe" & chr(34) &" x -r -o+ -ilog "
+					command= chr(34)& "c:\program files\winrar\rar.exe" & chr(34) &" x -r -o+ -dh -inul -ilogd:\rar.log "
 				end if
 				if right(lcase(src),4)=".zip" then 
-					command= chr(34)& "c:\program files\winrar\winrar.exe" & chr(34) &" x -r -o+ -ilog "
+					command= chr(34)& "c:\program files\winrar\winrar.exe" & chr(34) &" x -r -o+ -dh -inul -ilogd:\rar.log "
 				end if
 				if pwd <> "" and pwd <> "false" and pwd <> "OnlyToday" and pwd <> "decomp" then
 					command = command & " -p" & pwd & " "
@@ -323,18 +335,25 @@ Function File_COPY(src,tag,pwd)
 				if pwd<>"decomp" then
 					command = command & tag & " " & tag_path
 				else
-					command = command & src & " " & mid(src,1,instrrev(src,"\"))
+					if tag="null" then
+						command = command & src & " " & mid(src,1,instrrev(src,"\"))
+					else
+						command = command & tag & " " & tag_path
+					end if
 				end if
-			  Set WshShell = server.CreateObject("Wscript.Shell")
-		'	  command = command & chr(34)
-		''	  response.write command
-			  IsSuccess = WshShell.Run (command, 1, true)
-			  response.write IsSuccess
-		'	  FSO1.DeleteFile tag,true
-		'	  response.write tag_path & "OK-" & mid(tag,instrrev(tag,"\")+1)
-			  FSO1.CopyFile tag, tag_path & "OK-" & mid(tag,instrrev(tag,"\")+1) ,true
-			  FSO1.DeleteFile tag, true
-			  Set WshShell = Nothing
+				Set WshShell = server.CreateObject("Wscript.Shell")
+		'		command = command & chr(34)
+				IsSuccess = WshShell.Run (command, 1, true)
+				if IsSuccess=1 then
+					response.write command
+'					response.write IsSuccess
+		'		FSO1.DeleteFile tag,true
+		'		response.write tag_path & "OK-" & mid(tag,instrrev(tag,"\")+1)
+				else
+					FSO1.CopyFile tag, tag_path & "OK-" & mid(tag,instrrev(tag,"\")+1) ,true
+					FSO1.DeleteFile tag, true
+				end if
+				Set WshShell = Nothing
 			end if
 
 		end if
