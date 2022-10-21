@@ -56,7 +56,7 @@
 			source(n,5)=""					'source(n,5),一部分已预读文件信息: (日期时间:文件长度)
 			
 			if source(n,4) = "zxjt_gzb" then
-				'中信建投估值表特别处理'
+				'zzzzzzzzzzz特别处理'
 				d0=source(n,0)
 				d1=source(n,1)
 				d2=source(n,2)
@@ -78,7 +78,7 @@
 						end if
 					next
 				else
-					'未找到中信建投估值表文件'
+					'未找到zzzzzzzzzz文件'
 				end if
 			end if
 			if instr(linetext(2),"?") >0 or instr(linetext(2),"*") >0 then
