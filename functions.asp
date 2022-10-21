@@ -7,22 +7,45 @@ Function IIf(bExp1, sVal1, sVal2)
     End If
 End Function
 
+Function CreateFolders(path)
+	''Set fso = CreateObject("Scripting.FileSystemObject")
+	CreateFolderEx fso,path
+	''Set fso = Nothing
+End Function
+
+Function CreateFolderEx(fso, path)
+	If fso.FolderExists(path) Then
+		Exit Function
+	End if
+	If Not fso.FolderExists(fso.GetParentfolderName(path)) Then
+		CreateFolderEx fso, fso.GetParentfolderName(path)
+	End IF
+	fso.CreateFolder(path)
+End Function
+
 Function File_COPY(src, tag, pwd)
-	Dim FSO1
-	Set FSO1 = Server.CreateObject("Scripting.FileSystemObject")
+	''Dim FSO1
+	''Set FSO1 = Server.CreateObject("Scripting.FileSystemObject")
 '    response.write "src=" & src & ", tag=" & tag & ", pwd=" & pwd & "<br/>"
   
 	IF (pwd="OnlyToday") and (d<>date()) then
 		'跳过严格当天拷贝文件
 	else
-		if FSO1.FileExists( src ) then
+		if FSO.FileExists( src ) then
 			if left(lcase(tag),4) <> "null" then
 				tag_path=mid(tag,1,instrrev(tag,"\"))
-				if not FSO1.FolderExists(tag_path) then
-				   FSO1.CreateFolder(tag_path)
+				tag_file=mid(tag,instrrev(tag,"\")+1)
+				''response.write "tag_path=" & tag_path
+				if not FSO.FolderExists(tag_path) then
+					CreateFolders tag_path
+				   ''FSO1.CreateFolder(tag_path)
 				end if
-				FSO1.CopyFile src,tag,true
-				if not FSO1.FileExists(tag) then
+				if pwd="decomp" then
+					tag_file = "OK-" + tag_file
+					tag = tag_path + tag_file
+				end if
+				FSO.CopyFile src,tag,true
+				if not FSO.FileExists(tag) then
 					response.write "Copy Fail : " & tag
 				end if
 			end if
@@ -35,20 +58,26 @@ Function File_COPY(src, tag, pwd)
 					tag1 = tag & ".OK"
 				end if
 		'		response.write src1 & "->" & tag1
-				set okfile=FSO1.createtextfile(tag1,true)
+				set okfile=FSO.createtextfile(tag1,true)
 				okfile.write ""
 				okfile.close
 				set okfile=nothing
 				
 			end if
-			if (right(lcase(src),4)=".zip" or right(lcase(src),4)=".rar") and (right(lcase(tag),4)<> "null" or pwd="decomp") and ( pwd <> "OK" and pwd <> "false" ) then
+			if (right(lcase(src),4)=".zip" or right(lcase(src),4)=".rar") and (right(lcase(tag),4)<> "null" or pwd="decomp" or pwd="nofolder") and ( pwd <> "OK" and pwd <> "false" ) then
 				if right(lcase(src),4)=".rar" then
-					command= chr(34)& "c:\program files\winrar\rar.exe" & chr(34) &" x -r -o+ -dh -inul -ilogd:\rar.log "
+					command= chr(34)& "c:\program files\winrar\rar.exe" & chr(34) 
 				end if
 				if right(lcase(src),4)=".zip" then 
-					command= chr(34)& "c:\program files\winrar\winrar.exe" & chr(34) &" x -r -o+ -dh -inul -ilogd:\rar.log "
+					command= chr(34)& "c:\program files\winrar\winrar.exe" & chr(34)
 				end if
-				if pwd <> "" and pwd <> "false" and pwd <> "OnlyToday" and pwd <> "decomp" then
+				if pwd="nofolder" then
+					command = command & " e"
+				else
+					command = command & " x"
+				end if
+				command = command & " -r -o+ -dh -inul -ilogd:\rar.log "
+				if pwd <> "" and pwd <> "false" and pwd <> "OnlyToday" and pwd <> "decomp" and pwd <> "nofolder" then
 					command = command & " -p" & pwd & " "
 				else
 					command = command & " -p- "
@@ -64,43 +93,43 @@ Function File_COPY(src, tag, pwd)
 				end if
 				Set WshShell = server.CreateObject("Wscript.Shell")
 		'		command = command & chr(34)
-				IsSuccess = 999
+''				IsSuccess = 999
 				IsSuccess = WshShell.Run (command, 1, True)
-				do while IsSuccess = 999
+''				do while IsSuccess = 999
 ''					response.write "wait for winrar running decompress"
-					call DelayTime(1)
-				loop 
-				if IsSuccess=0 then
-					FSO1.CopyFile tag, tag_path & "OK-" & mid(tag,instrrev(tag,"\")+1) ,true
-					FSO1.DeleteFile tag, true					
+''					call DelayTime(1)
+''				loop 
+''				if IsSuccess=0 then
+''					FSO1.CopyFile tag, tag_path & "OK-" & mid(tag,instrrev(tag,"\")+1) ,true
+''					FSO1.DeleteFile tag, true					
 '				else
 '					response.write "decomp error: " & cstr(IsSuccess) & " ,Command=" &command & "<br/>"
 '					response.write IsSuccess
-				end if
+''				end if
 				Set WshShell = Nothing
 			end if
 			if pwd="ctod" then
-				'对zzzzzz两融清算文件字段特殊处理'
+				'对yyyyyyyyy字段特殊处理'
 				src_path=mid(src,1,instrrev(src,"\")-1)
 				src_file=mid(src,instrrev(src,"\")+1)
 				format_modify src_path, src_file
 			end if
 			if pwd="zxjt_gzb" then
-				'对zzzzzz估值表特殊处理'
+				'对zzzzzzzz特殊处理'
 				zxjt_gzb_special src, tag, d
 			end if
 		end if
 	end if
-	Set FSO1 = Nothing
+	''Set FSO1 = Nothing
 End Function
 
 Function Get_SH_File(src,srcfile)
-  Dim FSO1
-  Set FSO1 = Server.CreateObject("Scripting.FileSystemObject")
+  ''Dim FSO1
+  ''Set FSO1 = Server.CreateObject("Scripting.FileSystemObject")
   EzTrans_status_File=left(src,instr(lcase(src),"rptfile")+7)&"EzTrans_status.txt" 
 '  Get_SH_File=EzTrans_status_File
-  if FSO1.FileExists(EzTrans_status_File) then
-	set status=FSO1.opentextfile(EzTrans_status_File,1,false)
+  if FSO.FileExists(EzTrans_status_File) then
+	set status=FSO.opentextfile(EzTrans_status_File,1,false)
 	do while status.AtEndOfStream = false
 		getaline=status.ReadLine
 		if left(getaline,9) = "File = " & ucase(left(srcfile,2)) then
@@ -114,7 +143,7 @@ Function Get_SH_File(src,srcfile)
 	status=close
 	set status=Nothing
   end if
-  Set FSO1 = Nothing
+  ''Set FSO1 = Nothing
 End Function
 
 Function format_modify(path, src)
@@ -187,26 +216,26 @@ End Function
 Function zxjt_gzb_getfile(src_file)
 	result = ""
 	temp=split(src_file,"*")
-	Set Fso1=server.createobject("Scripting.FileSystemObject")
-	if Fso1.folderexists(server.mappath(temp(0))) then
+	''Set Fso1=server.createobject("Scripting.FileSystemObject")
+	if Fso.folderexists(temp(0)) then
 		mm=0
-		set mydir=Fso1.getfolder(server.mappath(temp(0)))
+		set mydir=Fso.getfolder(temp(0))
 		for each item in mydir.SubFolders
 			gzb_path = replace(src_file , "*" , item.name)
-			if Fso1.FileExists(server.mappath(gzb_path)) then
-				set sf=FSO.getfile(server.mappath(gzb_path))
+			if Fso.FileExists(gzb_path) then
+				set sf=FSO.getfile(gzb_path)
 				if sf.size > 1024 then
 					result = gzb_path & "," & result
 				end if
 			end if
 		next
 	else
-		''response.write "zzzzz估值表源路径未找到"
+		''response.write "zzzzzzzz源路径未找到"
 	end if
 	zxjt_gzb_getfile = result
 	set mydir = nothing
 	set sf = nothing
-	set Fso1 = nothing
+	''set Fso1 = nothing
 End Function
 
 Sub DelayTime(secondNumber) 
@@ -214,5 +243,24 @@ Sub DelayTime(secondNumber)
 	startTime=NOW() 
 	do while datediff("s",startTime,NOW())<secondNumber 
 	loop 
-End Sub  
+End Sub 
+
+Function Get_folder_files(fs_path)
+	Set WshShell = server.CreateObject("Wscript.Shell")
+    Set IsSuccess = WshShell.exec ("%windir%\system32\cmd.exe /s /c " & chr(34) & "dir /a:-d /-C " & fs_path & " 2>&1" & chr(34))
+    result=IsSuccess.stdout.readall()
+    Set IsSuccess = Nothing
+    Set WshShell = Nothing
+	Get_folder_files = ""
+	for each line in split(result, chr(10))
+		if left(line,1)="2" then
+			Get_folder_files = Get_folder_files & "," & replace(mid(line,37),chr(13),"") & "|" & left(line,17) & "%" & mid(line,19,17)
+		end if
+	next
+	Get_folder_files = mid(Get_folder_files,2)
+''	response.write "return=" & Get_folder_files & "</br>"
+End Function
+
+Set FSO = Nothing
+
 %>
